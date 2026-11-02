@@ -1,0 +1,19 @@
+/* Shell-only styles (prefixed shell-). Module styles live in src/board/board.css and src/finance/finance.css. */
+.shell-nav {
+  position: sticky; top: 0; z-index: 1000;
+  display: flex; gap: 0.25rem; align-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 0.4rem) 0.75rem 0.4rem;
+  background: #0b0e14ee; border-bottom: 1px solid #2a3550;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+.shell-nav a { color: #9aa8c7; text-decoration: none; padding: 0.45rem 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; }
+.shell-nav a.active { color: #e8eefc; background: #1d2640; }
+.shell-nav__brand { margin-right: auto; color: #5eead4 !important; }
+.shell-home { max-width: 860px; margin: 0 auto; padding: 2rem 1rem; color: #e8eefc; font-family: 'Segoe UI', system-ui, sans-serif; }
+.shell-home h1 { margin: 0 0 0.5rem; }
+.shell-home__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.shell-home__card { display: block; padding: 1.25rem; border: 1px solid #2a3550; border-radius: 14px; background: #171e2e; color: inherit; text-decoration: none; }
+.shell-home__card:hover { background: #1d2640; }
+.shell-home__card h2 { margin: 0 0 0.4rem; color: #3d8bfd; }
+.shell-home__note { color: #9aa8c7; font-size: 0.85rem; }
+@media print { .shell-nav { display: none; } }

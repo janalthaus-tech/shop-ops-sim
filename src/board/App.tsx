@@ -1,0 +1,555 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import './board.css';
+import { useVisualViewportHeight } from '../useVisualViewportHeight';
+import { BoardView } from './components/BoardView';
+import { DecisionDemo, type DemoTarget } from './components/DecisionDemo';
+import { Debrief } from './components/Debrief';
+import { FlowGuide } from './components/FlowGuide';
+import { Home, type StartOptions } from './components/Home';
+import { hasSeenTutorial, Tutorial } from './components/Tutorial';
+import {
+  applyPace,
+  approveAllPending,
+  approveLine,
+  assignBayTech,
+  clearFlag,
+  computeDebrief,
+  getScenario,
+  loadRepairDetailEnabled,
+  loadRole,
+  markAnswerDelivered,
+  markCustomerCalled,
+  markPaymentCollected,
+  markInspectionComplete,
+  markLineDone,
+  markLineInRepair,
+  markPartsOrdered,
+  moveJob,
+  saveRepairDetailEnabled,
+  saveRole,
+  startScenario,
+  tickEngine,
+  type AppScreen,
+  type BoardColumnId,
+  type DebriefStats,
+  type EngineSnapshot,
+  type PaceId,
+  type RoleId,
+  type Scenario,
+  type SpeedMul,
+} from './model';
+
+const DEMO_SCENARIO_ID = 'morning-rush';
+const DEMO_TOAST =
+  'Demo event: Walk-in waiting in lobby — check Dispatch and the earliest W timer.';
+
+function screenFromPath(pathname: string): AppScreen {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  return path.endsWith('/board/flow') ? 'flow' : 'home';
+}
+
+export default function BoardApp() {
+  useVisualViewportHeight();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const syncFlowPath = useCallback(
+    (next: AppScreen) => {
+      const want = next === 'flow' ? '/board/flow' : '/board';
+      if (location.pathname.replace(/\/+$/, '') !== want) navigate(want);
+    },
+    [location.pathname, navigate],
+  );
+  const [screen, setScreen] = useState<AppScreen>(() => screenFromPath(location.pathname));
+  const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [engine, setEngine] = useState<EngineSnapshot | null>(null);
+  const [running, setRunning] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [stats, setStats] = useState<DebriefStats | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialMarkSeen, setTutorialMarkSeen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demoFocus, setDemoFocus] = useState<DemoTarget | null>(null);
+  const [pace, setPace] = useState<PaceId>('easy');
+  const [speedMul, setSpeedMul] = useState<SpeedMul>(1);
+  const [repairDetailEnabled, setRepairDetailEnabled] = useState(() =>
+    loadRepairDetailEnabled(),
+  );
+  const [role, setRole] = useState<RoleId>(() => loadRole());
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+  const engineRef = useRef(engine);
+  const scenarioRef = useRef(scenario);
+  const runningRef = useRef(running);
+  const speedMulRef = useRef(speedMul);
+
+  engineRef.current = engine;
+  scenarioRef.current = scenario;
+  runningRef.current = running;
+  speedMulRef.current = speedMul;
+
+  useEffect(() => {
+    const next = screenFromPath(location.pathname);
+    if (next === 'flow') {
+      setScreen('flow');
+      setRunning(false);
+    } else {
+      setScreen((cur) => (cur === 'flow' ? 'home' : cur));
+    }
+  }, [location.pathname]);
+
+  const goHome = useCallback(() => {
+    setRunning(false);
+    setDemoOpen(false);
+    setDemoFocus(null);
+    setScenario(null);
+    setEngine(null);
+    setSelectedId(null);
+    setScreen('home');
+    syncFlowPath('home');
+  }, [syncFlowPath]);
+
+  const openFlow = useCallback(() => {
+    setRunning(false);
+    setTutorialOpen(false);
+    setDemoOpen(false);
+    setScreen('flow');
+    syncFlowPath('flow');
+  }, [syncFlowPath]);
+
+  const finish = useCallback(() => {
+    const sc = scenarioRef.current;
+    const en = engineRef.current;
+    if (!sc || !en) return;
+    setRunning(false);
+    setStats(computeDebrief(sc, en.board, en.fired));
+    setScreen('debrief');
+  }, []);
+
+  useEffect(() => {
+    if (!running || !scenario) return;
+
+    const loop = (ts: number) => {
+      if (!runningRef.current || !scenarioRef.current || !engineRef.current) return;
+      if (lastTsRef.current == null) lastTsRef.current = ts;
+      const dt = (ts - lastTsRef.current) / 1000;
+      lastTsRef.current = ts;
+      const sc = scenarioRef.current;
+      const rate = (1 / sc.realSecondsPerSimMin) * speedMulRef.current;
+      const nextMin = engineRef.current.simMin + dt * rate;
+
+      if (nextMin >= sc.durationMin) {
+        const snapped = tickEngine(sc, engineRef.current, sc.durationMin);
+        setEngine(snapped);
+        finish();
+        return;
+      }
+
+      setEngine(tickEngine(sc, engineRef.current, nextMin));
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    lastTsRef.current = null;
+    rafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [running, scenario, finish]);
+
+  const applyStartOptions = (options: StartOptions) => {
+    setPace(options.pace);
+    setRepairDetailEnabled(options.repairDetailEnabled);
+    setRole(options.role);
+    saveRepairDetailEnabled(options.repairDetailEnabled);
+    saveRole(options.role);
+  };
+
+  const begin = (scenarioId: string, options: StartOptions) => {
+    const base = getScenario(scenarioId);
+    if (!base) return;
+    const sc = applyPace(base, options.pace);
+    const snap = startScenario(sc);
+    applyStartOptions(options);
+    setSpeedMul(1);
+    setScenario(sc);
+    setEngine(snap);
+    setSelectedId(null);
+    setStats(null);
+    setDemoOpen(false);
+    setScreen('board');
+    const firstTime = !hasSeenTutorial();
+    if (firstTime) {
+      setRunning(false);
+      setTutorialMarkSeen(true);
+      setTutorialOpen(true);
+    } else {
+      setRunning(true);
+    }
+  };
+
+  const beginDecisionDemo = (options?: StartOptions) => {
+    const base = getScenario(DEMO_SCENARIO_ID);
+    if (!base) return;
+    const opts: StartOptions = options ?? {
+      pace: 'easy',
+      repairDetailEnabled: loadRepairDetailEnabled(),
+      role: loadRole(),
+    };
+    const sc = applyPace(base, opts.pace);
+    const snap = startScenario(sc);
+    applyStartOptions(opts);
+    setSpeedMul(0.5);
+    setScenario(sc);
+    setEngine({ ...snap, toast: DEMO_TOAST });
+    setSelectedId(null);
+    setStats(null);
+    setTutorialOpen(false);
+    setDemoOpen(true);
+    setRunning(false);
+    setScreen('board');
+  };
+
+  const selectDemoWaiter = useCallback(() => {
+    const en = engineRef.current;
+    if (!en) return;
+    const waiter =
+      en.board.jobs.find(
+        (j) => j.markers?.includes('W') && j.waiterTimerMin != null,
+      ) ?? en.board.jobs.find((j) => j.markers?.includes('W'));
+    if (waiter) setSelectedId(waiter.id);
+  }, []);
+
+  const openTutorial = () => {
+    setTutorialMarkSeen(false);
+    setRunning(false);
+    setTutorialOpen(true);
+  };
+
+  const openDemoFromBoard = () => {
+    setRunning(false);
+    setSpeedMul(0.5);
+    setEngine((prev) => (prev ? { ...prev, toast: DEMO_TOAST } : prev));
+    setDemoOpen(true);
+  };
+
+  const closeTutorial = () => {
+    setTutorialOpen(false);
+    setTutorialMarkSeen(false);
+    if (demoOpen) return;
+    if (screen === 'board' && scenario && engine) {
+      setRunning(true);
+    }
+  };
+
+  const closeDemoSkip = () => {
+    setDemoOpen(false);
+    setDemoFocus(null);
+    setRunning(false);
+    setScreen('home');
+    setScenario(null);
+    setEngine(null);
+    setSelectedId(null);
+  };
+
+  const closeDemoPlay = () => {
+    setDemoOpen(false);
+    setDemoFocus(null);
+    setSpeedMul(1);
+    setEngine((prev) => (prev ? { ...prev, toast: null } : prev));
+    setRunning(true);
+  };
+
+  const closeDemoHome = () => {
+    setDemoOpen(false);
+    setDemoFocus(null);
+    setRunning(false);
+    setScreen('home');
+    setScenario(null);
+    setEngine(null);
+    setSelectedId(null);
+  };
+
+  const onToggleRepairDetail = (next: boolean) => {
+    setRepairDetailEnabled(next);
+    saveRepairDetailEnabled(next);
+  };
+
+  const ensureRepairDetail = useCallback(() => {
+    setRepairDetailEnabled(true);
+    saveRepairDetailEnabled(true);
+  }, []);
+
+  const onChangeRole = (next: RoleId) => {
+    setRole(next);
+    saveRole(next);
+  };
+
+  const onMove = (jobId: string, column: BoardColumnId) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        board: moveJob(prev.board, jobId, column, Math.floor(prev.simMin)),
+      };
+    });
+  };
+
+  const onClearBlocker = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      let board = clearFlag(prev.board, jobId, 'blocked');
+      board = clearFlag(board, jobId, 'waiting');
+      return { ...prev, board, toast: 'Blocker cleared — keep the car moving.' };
+    });
+  };
+
+  const onAnswerDelivered = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const board = markAnswerDelivered(
+        prev.board,
+        jobId,
+        Math.floor(prev.simMin),
+      );
+      return {
+        ...prev,
+        board,
+        toast: 'Answer delivered — speed-zone clock stopped for that car.',
+      };
+    });
+  };
+
+
+  const onCallCustomer = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const board = markCustomerCalled(
+        prev.board,
+        jobId,
+        Math.floor(prev.simMin),
+      );
+      return {
+        ...prev,
+        board,
+        toast: 'Customer called — ready-for-pickup notification logged.',
+      };
+    });
+  };
+
+  const onGetPayment = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const board = markPaymentCollected(
+        prev.board,
+        jobId,
+        Math.floor(prev.simMin),
+      );
+      return {
+        ...prev,
+        board,
+        toast: 'Payment collected — ready to move toward Final.',
+      };
+    });
+  };
+
+  const onAssignTech = (jobId: string, tech: string | undefined) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const job = prev.board.jobs.find((j) => j.id === jobId);
+      if (!job) return prev;
+      const board = assignBayTech(prev.board, jobId, job.bay, tech);
+      return {
+        ...prev,
+        board,
+        toast: tech
+          ? `Assigned ${tech} — sold hours now bank toward flag hrs.`
+          : 'Tech cleared — flag hours need a tech on the card.',
+      };
+    });
+  };
+
+  const onMarkInspectionComplete = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        board: markInspectionComplete(prev.board, jobId),
+        toast: 'Inspection complete — proposed repairs ready for the advisor.',
+      };
+    });
+  };
+
+  const onApproveAllPending = (jobId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const sim = Math.floor(prev.simMin);
+      return {
+        ...prev,
+        board: approveAllPending(prev.board, jobId, sim),
+        toast: 'Customer approved pending lines.',
+      };
+    });
+  };
+
+  const onApproveLine = (jobId: string, lineId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const sim = Math.floor(prev.simMin);
+      return {
+        ...prev,
+        board: approveLine(prev.board, jobId, lineId, sim),
+        toast: 'Line approved.',
+      };
+    });
+  };
+
+  const onMarkPartsOrdered = (jobId: string, lineId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const sim = Math.floor(prev.simMin);
+      return {
+        ...prev,
+        board: markPartsOrdered(prev.board, jobId, lineId, sim, 30),
+        toast: 'Parts ordered — ETA +30 sim minutes.',
+      };
+    });
+  };
+
+  const onMarkLineDone = (jobId: string, lineId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      const sim = Math.floor(prev.simMin);
+      return {
+        ...prev,
+        board: markLineDone(prev.board, jobId, lineId, sim),
+        toast: 'Repair line marked done.',
+      };
+    });
+  };
+
+  const onMarkLineInRepair = (jobId: string, lineId: string) => {
+    setEngine((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        board: markLineInRepair(prev.board, jobId, lineId),
+        toast: 'Line moved to in repair.',
+      };
+    });
+  };
+
+  if (screen === 'flow') {
+    return <FlowGuide onHome={goHome} />;
+  }
+
+  if (screen === 'home') {
+    return (
+      <Home
+        onStart={begin}
+        onWatchDemo={beginDecisionDemo}
+        onOpenFlow={openFlow}
+      />
+    );
+  }
+
+  if (screen === 'debrief' && scenario && stats && engine) {
+    return (
+      <Debrief
+        scenario={scenario}
+        stats={stats}
+        fired={engine.fired}
+        pace={pace}
+        speedMul={speedMul}
+        onAgain={() =>
+          begin(scenario.id, {
+            pace,
+            repairDetailEnabled,
+            role,
+          })
+        }
+        onHome={() => {
+          setScreen('home');
+          setScenario(null);
+          setEngine(null);
+          setRunning(false);
+        }}
+      />
+    );
+  }
+
+  if (screen === 'board' && scenario && engine) {
+    return (
+      <>
+        <BoardView
+          scenario={scenario}
+          board={engine.board}
+          simMin={engine.simMin}
+          running={running}
+          toast={engine.toast}
+          fired={engine.fired}
+          selectedId={selectedId}
+          speedMul={speedMul}
+          onSpeedMul={setSpeedMul}
+          repairDetailEnabled={repairDetailEnabled}
+          role={role}
+          onToggleRepairDetail={onToggleRepairDetail}
+          onChangeRole={onChangeRole}
+          onSelect={setSelectedId}
+          onMove={onMove}
+          onClearBlocker={onClearBlocker}
+          onAnswerDelivered={onAnswerDelivered}
+          onCallCustomer={onCallCustomer}
+          onGetPayment={onGetPayment}
+          onAssignTech={onAssignTech}
+          onMarkInspectionComplete={onMarkInspectionComplete}
+          onApproveAllPending={onApproveAllPending}
+          onApproveLine={onApproveLine}
+          onMarkPartsOrdered={onMarkPartsOrdered}
+          onMarkLineDone={onMarkLineDone}
+          onMarkLineInRepair={onMarkLineInRepair}
+          onTogglePause={() => setRunning((r) => !r)}
+          onEnd={finish}
+          onDismissToast={() =>
+            setEngine((prev) => (prev ? { ...prev, toast: null } : prev))
+          }
+          onHome={() => {
+            setRunning(false);
+            setDemoOpen(false);
+            setDemoFocus(null);
+            setScreen('home');
+            setScenario(null);
+            setEngine(null);
+          }}
+          onOpenTutorial={openTutorial}
+          onOpenDemo={openDemoFromBoard}
+          demoMode={demoOpen}
+          demoFocus={demoOpen ? demoFocus : null}
+        />
+        <Tutorial
+          open={tutorialOpen}
+          onClose={closeTutorial}
+          markSeen={tutorialMarkSeen}
+        />
+        <DecisionDemo
+          open={demoOpen}
+          repairDetailEnabled={repairDetailEnabled}
+          onEnsureRepairDetail={ensureRepairDetail}
+          onSelectWaiter={selectDemoWaiter}
+          onClearSelection={() => setSelectedId(null)}
+          onFocusChange={setDemoFocus}
+          onFinishPlay={closeDemoPlay}
+          onFinishHome={closeDemoHome}
+          onSkip={closeDemoSkip}
+        />
+      </>
+    );
+  }
+
+  return (
+      <Home
+        onStart={begin}
+        onWatchDemo={beginDecisionDemo}
+        onOpenFlow={openFlow}
+      />
+    );
+}
