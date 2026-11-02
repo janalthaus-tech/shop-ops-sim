@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './board.css';
 import { useVisualViewportHeight } from '../useVisualViewportHeight';
+import { buildBridgeSeed, saveBridgeSeed } from '../bridge';
 import { BoardView } from './components/BoardView';
 import { DecisionDemo, type DemoTarget } from './components/DecisionDemo';
 import { Debrief } from './components/Debrief';
@@ -472,6 +473,11 @@ export default function BoardApp() {
             role,
           })
         }
+        onPreviewFinance={() => {
+          const bridge = buildBridgeSeed(stats, scenario, pace);
+          saveBridgeSeed(bridge);
+          navigate('/finance', { state: { bridgeSeed: bridge } });
+        }}
         onHome={() => {
           setScreen('home');
           setScenario(null);

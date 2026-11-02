@@ -1,0 +1,32 @@
+import { describe, expect, it } from 'vitest';
+import { boardLeakage, boardToFinanceSeed, mergeInputs } from './bridge';
+import { STARTER_6_BAY } from './finance/model/defaults';
+import type { DebriefStats } from './board/model/types';
+
+const stats: DebriefStats = {
+  completed: 3, inProcess: 2, blockersHit: 1, urgentHandled: 1, score: 70, maxScore: 100, grade: 'B', notes: [],
+  waitersLeft: 1, hoursStuckPartsWip: 2.25, qcRestarts: 1, answersOnTime: 3, answersLate: 1,
+  gpSold: 1800, gpTarget: 2400,
+  techHours: [
+    { tech: 'A', hours: 6, goal: 8, efficiencyPct: 80 },
+    { tech: 'B', hours: 4, goal: 8, efficiencyPct: 60 },
+  ],
+};
+
+describe('bridge', () => {
+  it('seeds sim-scaled finance inputs', () => {
+    const s = boardToFinanceSeed(stats, { durationMin: 240, goals: { techHoursPerDay: 8, gpSoldTarget: 2400, flatRatePerFlagHr: 50 } });
+    expect(s.rosPerDay).toBe(6);
+    expect(s.aro).toBe(1000); // 1800 / 0.6 / 3
+    expect(s.shopEfficiencyPct).toBe(70);
+    expect(s.avgTechPayPerFlagHr).toBe(50);
+    expect(s.techCount).toBe(2);
+    expect(s.closeRatioPct).toBe(75);
+  });
+  it('leakage + merge reports changes', () => {
+    expect(boardLeakage(stats).gpGap).toBe(-600);
+    const { merged, changes } = mergeInputs(STARTER_6_BAY, { techCount: 2, bayCount: STARTER_6_BAY.bayCount });
+    expect(merged.techCount).toBe(2);
+    expect(changes.map((c) => c.key)).toEqual(['techCount']);
+  });
+});

@@ -9,6 +9,7 @@ interface Props {
   speedMul: SpeedMul;
   onAgain: () => void;
   onHome: () => void;
+  onPreviewFinance?: () => void;
 }
 
 export function Debrief({
@@ -19,6 +20,7 @@ export function Debrief({
   speedMul,
   onAgain,
   onHome,
+  onPreviewFinance,
 }: Props) {
   return (
     <div className="debrief">
@@ -167,6 +169,11 @@ export function Debrief({
         <button type="button" className="btn btn--ghost" onClick={onHome}>
           Scenario picker
         </button>
+        {onPreviewFinance && (
+          <button type="button" className="btn btn--ghost" onClick={onPreviewFinance} title="Sim-scaled EXAMPLE figures; you confirm before anything changes">
+            Preview these ops numbers in Finance
+          </button>
+        )}
       </div>
 
       <footer className="footer">
