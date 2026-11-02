@@ -23,6 +23,14 @@ describe('bridge', () => {
     expect(s.techCount).toBe(2);
     expect(s.closeRatioPct).toBe(75);
   });
+  it('omits rosPerDay and aro when completed === 0', () => {
+    const s = boardToFinanceSeed({ ...stats, completed: 0 }, { durationMin: 240, goals: { techHoursPerDay: 8, gpSoldTarget: 2400, flatRatePerFlagHr: 50 } });
+    expect('rosPerDay' in s).toBe(false);
+    expect('aro' in s).toBe(false);
+    const { merged } = mergeInputs(STARTER_6_BAY, s);
+    expect(merged.rosPerDay).toBe(STARTER_6_BAY.rosPerDay);
+  });
+
   it('leakage + merge reports changes', () => {
     expect(boardLeakage(stats).gpGap).toBe(-600);
     const { merged, changes } = mergeInputs(STARTER_6_BAY, { techCount: 2, bayCount: STARTER_6_BAY.bayCount });

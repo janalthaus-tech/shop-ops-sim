@@ -7,6 +7,7 @@
  * Assumptions (documented, EXAMPLE):
  *  - rosPerDay: completed ROs scaled to an 8h (480 min) teaching day:
  *      completed × (480 / scenario.durationMin). Labeled sim-scaled.
+ *      Omitted when completed === 0 (never seed 0).
  *  - aro: Board runs do not track RO sales $. We DO NOT treat gpSold as sales.
  *      ARO ≈ (gpSold ÷ ASSUMED_GP_PCT) ÷ completed ROs, with ASSUMED_GP_PCT = 60%.
  *      Omitted when there are no completed ROs or no GP$.
@@ -53,7 +54,8 @@ export function boardToFinanceSeed(
   scenario: Pick<Scenario, 'durationMin' | 'goals'>,
 ): Partial<ShopInputs> {
   const seed: Partial<ShopInputs> = {};
-  if (scenario.durationMin > 0) {
+  // completed === 0 (failed drill): omit rather than seed 0 over a good model.
+  if (scenario.durationMin > 0 && stats.completed > 0) {
     seed.rosPerDay = round(stats.completed * (TEACHING_DAY_MIN / scenario.durationMin), 1);
   }
   if (stats.completed > 0 && (stats.gpSold ?? 0) > 0) {
