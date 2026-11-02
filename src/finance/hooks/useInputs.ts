@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { calculate } from '../model/calc';
 import {
+  ACQUISITION_EXAMPLE_LEASED,
   BUSY_8_BAY,
   DEFAULT_INPUTS,
   mergeInputs,
@@ -53,6 +54,10 @@ export function useInputs() {
     setInputs({ ...BUSY_8_BAY });
   }, []);
 
+  const applyAcquisition = useCallback(() => {
+    setInputs({ ...ACQUISITION_EXAMPLE_LEASED });
+  }, []);
+
   const result = useMemo(() => calculate(inputs), [inputs]);
 
   return {
@@ -61,6 +66,7 @@ export function useInputs() {
     resetDefaults,
     applyStarter,
     applyBusy,
+    applyAcquisition,
     result,
   };
 }

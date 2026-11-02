@@ -48,6 +48,8 @@ export function Home({ onStart, onWatchDemo, onOpenFlow }: Props) {
   const selectRole = (next: RoleId) => {
     setRole(next);
     saveRole(next);
+    // Advisors sell from repair lines — default detail ON (user can still turn it off).
+    if (next === 'advisor' && !repairDetail) toggleRepairDetail(true);
   };
 
   const startOptions = (): StartOptions => ({

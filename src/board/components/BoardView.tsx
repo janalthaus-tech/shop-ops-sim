@@ -27,6 +27,7 @@ import {
   shopTechRoster,
   techHoursProgress,
   totalFlagHours,
+  DEFAULT_WIP_LIMITS,
 } from '../model';
 import { Column } from './Column';
 import type { DemoTarget } from './DecisionDemo';
@@ -769,6 +770,7 @@ export function BoardView({
               simMin={simMin}
               repairDetailEnabled={repairDetailEnabled}
               role={role}
+              wipLimit={(scenario.wipLimits ?? DEFAULT_WIP_LIMITS)[col] ?? DEFAULT_WIP_LIMITS[col]}
               onSelect={(id) => onSelect(id)}
               onDragStart={(id) => onSelect(id)}
               onDropJob={(columnId, jobId) => onMove(jobId, columnId)}

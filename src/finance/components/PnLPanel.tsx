@@ -165,11 +165,11 @@ export function PnLPanel({ pnl }: Props) {
           strong
         />
         <hr />
-        <Row
-          label="Operating income"
-          value={moneyWithSales(pnl.operatingIncome, pctOf(pnl.operatingIncome, sales))}
-          strong
-        />
+        <Row label="EBITDA (operating income)" value={moneyWithSales(pnl.ebitda, pctOf(pnl.ebitda, sales))} strong />
+        <Row label="Depreciation & amortization" value={moneyWithSales(pnl.depreciation, pctOf(pnl.depreciation, sales))} muted />
+        <Row label="EBIT" value={moneyWithSales(pnl.ebit, pctOf(pnl.ebit, sales))} strong />
+        <Row label="Interest" value={moneyWithSales(pnl.interest, pctOf(pnl.interest, sales))} muted />
+        <Row label="EBT (pre-tax)" value={moneyWithSales(pnl.ebt, pctOf(pnl.ebt, sales))} strong />
         <Row
           label="Income tax"
           value={moneyWithSales(pnl.incomeTax, pctOf(pnl.incomeTax, sales))}

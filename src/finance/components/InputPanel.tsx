@@ -127,6 +127,27 @@ export function InputPanel({ inputs, setField }: Props) {
       </section>
 
       <section className="card">
+        <h2>Acquisition debt (EXAMPLE / illustrative)</h2>
+        <p className="card-note">
+          SBA often unavailable to non–US citizen / non-PR owners (e.g. L-1B); confirm with lender/counsel. Owner cash EXAMPLE range $150–200k.
+        </p>
+        <div className="field-grid">
+          <NumberField label="Senior debt principal" value={inputs.seniorDebtPrincipal} min={0} step={1000} prefix="$" onChange={(v) => setField('seniorDebtPrincipal', v)} />
+          <NumberField label="Senior rate" value={inputs.seniorDebtRatePct} min={0} max={30} step={0.25} suffix="%" onChange={(v) => setField('seniorDebtRatePct', v)} />
+          <NumberField label="Senior term (yrs)" value={inputs.seniorDebtTermYears} min={0} step={1} onChange={(v) => setField('seniorDebtTermYears', v)} />
+          <NumberField label="Seller note principal" value={inputs.sellerNotePrincipal} min={0} step={1000} prefix="$" onChange={(v) => setField('sellerNotePrincipal', v)} />
+          <NumberField label="Seller note rate" value={inputs.sellerNoteRatePct} min={0} max={30} step={0.25} suffix="%" onChange={(v) => setField('sellerNoteRatePct', v)} />
+          <NumberField label="Seller note term (yrs)" value={inputs.sellerNoteTermYears} min={0} step={1} onChange={(v) => setField('sellerNoteTermYears', v)} />
+          <NumberField label="Owner cash invested" value={inputs.ownerCashInvested} min={0} step={5000} prefix="$" onChange={(v) => setField('ownerCashInvested', v)} hint="Informational" />
+          <NumberField label="Distributions / month" value={inputs.distributionsMonthly} min={0} step={500} prefix="$" onChange={(v) => setField('distributionsMonthly', v)} />
+          <label className="field">
+            <span>SBA available</span>
+            <input type="checkbox" checked={inputs.sbaAvailable} onChange={(e) => setField('sbaAvailable', e.target.checked)} />
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
         <h2>Balance sheet starters</h2>
         <div className="field-grid">
           <NumberField label="Opening cash" value={inputs.openingCash} min={0} step={1000} prefix="$" onChange={(v) => setField('openingCash', v)} />
@@ -134,7 +155,7 @@ export function InputPanel({ inputs, setField }: Props) {
           <NumberField label="Parts inventory" value={inputs.inventoryParts} min={0} step={1000} prefix="$" onChange={(v) => setField('inventoryParts', v)} />
           <NumberField label="Equipment (net)" value={inputs.equipmentNet} min={0} step={1000} prefix="$" onChange={(v) => setField('equipmentNet', v)} />
           <NumberField label="AP days" value={inputs.apDays} min={0} step={1} onChange={(v) => setField('apDays', v)} />
-          <NumberField label="Debt" value={inputs.debt} min={0} step={1000} prefix="$" onChange={(v) => setField('debt', v)} />
+          <NumberField label="Other debt (interest-only)" value={inputs.debt} min={0} step={1000} prefix="$" onChange={(v) => setField('debt', v)} />
           <NumberField label="Income tax rate" value={inputs.incomeTaxPct} min={0} max={100} step={1} suffix="%" onChange={(v) => setField('incomeTaxPct', v)} hint="Default 0%; try 21% for a rough corporate placeholder" />
         </div>
       </section>

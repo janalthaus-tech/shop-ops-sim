@@ -1,5 +1,5 @@
 import type { BoardColumnId, BoardState, JobFlag, VehicleJob } from './types';
-import { BOARD_COLUMNS, isSpeedZone } from './types';
+import { BOARD_COLUMNS, isSpeedZone, normalizeHours } from './types';
 
 let idCounter = 0;
 
@@ -80,6 +80,7 @@ export function moveJob(
         ...applyBayPull(job, toColumn),
         ...applyAnswerOnMove(job, toColumn, simMin),
       };
+      Object.assign(next, normalizeHours(next));
       if (toColumn === 'final' && job.column !== 'final') {
         next.completedAtSimMin = simMin;
         next.flags = job.flags.filter((f) => f !== 'waiting' && f !== 'blocked');
@@ -146,7 +147,7 @@ export function markPaymentCollected(
 }
 
 export function addJob(state: BoardState, job: VehicleJob): BoardState {
-  return { ...state, jobs: [...state.jobs, job] };
+  return { ...state, jobs: [...state.jobs, normalizeHours(job)] };
 }
 
 export function updateJob(
@@ -156,7 +157,7 @@ export function updateJob(
 ): BoardState {
   return {
     ...state,
-    jobs: state.jobs.map((j) => (j.id === jobId ? { ...j, ...patch } : j)),
+    jobs: state.jobs.map((j) => (j.id === jobId ? normalizeHours({ ...j, ...patch }) : j)),
   };
 }
 

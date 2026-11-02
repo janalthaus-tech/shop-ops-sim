@@ -20,7 +20,7 @@ export function BalanceSheetPanel({ bs }: Props) {
       <section className="card print-block">
         <h2>Balance sheet (month-end sketch)</h2>
         <h3 className="subhead">Assets</h3>
-        <Row label="Cash (opening)" value={formatUsd(bs.cash)} />
+        <Row label="Cash (closing)" value={formatUsd(bs.cash)} />
         <Row label="Accounts receivable" value={formatUsd(bs.ar)} />
         <Row label="Parts inventory" value={formatUsd(bs.inventory)} />
         <Row label="Equipment (net)" value={formatUsd(bs.equipmentNet)} />
@@ -28,13 +28,14 @@ export function BalanceSheetPanel({ bs }: Props) {
         <hr />
         <h3 className="subhead">Liabilities</h3>
         <Row label="Accounts payable" value={formatUsd(bs.ap)} />
-        <Row label="Debt" value={formatUsd(bs.debt)} />
+        <Row label="Debt (after principal paid)" value={formatUsd(bs.debt)} />
         <Row label="Total liabilities" value={formatUsd(bs.totalLiabilities)} strong />
         <hr />
-        <Row label="Equity (plug: Assets − Liabilities)" value={formatUsd(bs.equity)} strong />
+        <Row label="Equity (opening + NI − distributions)" value={formatUsd(bs.equity)} strong />
+        <Row label="Check: assets − liabilities − equity" value={formatUsd(bs.imbalance)} muted />
         <p className="card-note">
-          Implied cash after this month&apos;s NI: <strong>{formatUsd(bs.impliedCashAfterMonth)}</strong>
-          {' '}(opening cash + net income). Opening cash stays editable on the Inputs tab; equity is the balancing plug.
+          Closing cash = opening cash + NI + D&amp;A − ΔAR + ΔAP − principal {formatUsd(bs.principalRepaid)} − distributions{' '}
+          {formatUsd(bs.distributions)}. Opening equity {formatUsd(bs.openingEquity)} (opening AR/AP assumed 0).
         </p>
       </section>
     </div>

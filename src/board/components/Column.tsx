@@ -6,6 +6,7 @@ import {
   isRoleDimmed,
   isSpeedZone,
   isSoldZone,
+  wipLevel,
 } from '../model';
 import { VehicleCard } from './VehicleCard';
 
@@ -18,6 +19,8 @@ interface Props {
   simMin?: number;
   repairDetailEnabled?: boolean;
   role?: RoleId;
+  /** Soft WIP cap for this column (badge only). */
+  wipLimit?: number;
   onSelect: (id: string) => void;
   onDragStart: (id: string) => void;
   onDropJob: (columnId: BoardColumnId, jobId: string) => void;
@@ -32,6 +35,7 @@ export function Column({
   simMin = 0,
   repairDetailEnabled = false,
   role = 'full',
+  wipLimit,
   onSelect,
   onDragStart,
   onDropJob,
@@ -43,6 +47,7 @@ export function Column({
       ? 'column--sold'
       : 'column--selling';
   const dimColumn = isRoleDimmed(role, columnId);
+  const wip = wipLevel(jobs.length, wipLimit);
 
   return (
     <section
@@ -68,6 +73,14 @@ export function Column({
         <span className={`column__count ${bottleneck ? 'column__count--hot' : ''}`}>
           {jobs.length}
         </span>
+        {wip !== 'ok' && wipLimit != null && (
+          <span
+            className={`column__wip column__wip--${wip}`}
+            title={`Soft WIP limit ${wipLimit} — ${wip === 'red' ? 'well over limit, clear this pile' : 'at/over limit, finish before starting more'}`}
+          >
+            WIP {jobs.length}/{wipLimit}
+          </span>
+        )}
       </header>
       <div className="column__body">
         {jobs.map((job) => (

@@ -165,7 +165,7 @@ export function markInspectionComplete(
         id: `${jobId}-line-1`,
         description: job.concern || 'Inspection findings',
         status: 'pending_approval',
-        hours: job.soldHours,
+        hours: job.soldHours ?? job.quotedHours,
       },
     ];
   } else {

@@ -282,6 +282,11 @@ export default function BoardApp() {
   const onChangeRole = (next: RoleId) => {
     setRole(next);
     saveRole(next);
+    // Advisor role defaults repair detail ON.
+    if (next === 'advisor' && !repairDetailEnabled) {
+      setRepairDetailEnabled(true);
+      saveRepairDetailEnabled(true);
+    }
   };
 
   const onMove = (jobId: string, column: BoardColumnId) => {

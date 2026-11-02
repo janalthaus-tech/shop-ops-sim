@@ -114,6 +114,8 @@ export interface VehicleJob {
   waiterTimerMin?: number;
   /** Hours sold on this job (factory-of-hours / Parts+WIP totals) */
   soldHours?: number;
+  /** Hours quoted but not yet sold (speed zone, before answer delivered). Promoted to soldHours on sell. */
+  quotedHours?: number;
   /** Gross profit dollars when work is sold (optional; else soldHours × gpPerHourHint) */
   gpSold?: number;
   /** Times bounced from QC back to advisor */
@@ -180,6 +182,8 @@ export interface Scenario {
    * 1 = authored 60 sim min; Easy ~1.5, Challenge ~0.85.
    */
   answerWindowScale?: number;
+  /** Optional soft WIP caps per column (overrides DEFAULT_WIP_LIMITS). Soft = badge only, no lock. */
+  wipLimits?: Partial<Record<BoardColumnId, number>>;
   /** Optional training difficulty badge (scenario complexity — not Pace) */
   difficulty?: 'intro' | 'intermediate' | 'advanced';
   /** One-line skill focus for the scenario picker */
@@ -259,3 +263,39 @@ export interface NextImportantHint {
   reason: string;
 }
 
+
+/**
+ * Unsold cars must not look sold: in dispatch/inspection without an answer,
+ * any seeded soldHours become quotedHours. Once the job leaves the speed zone
+ * (or the answer is delivered), quotedHours are promoted to soldHours.
+ */
+export function normalizeHours<T extends { column: BoardColumnId; soldHours?: number; quotedHours?: number; answerDeliveredAtSimMin?: number }>(job: T): T {
+  const unsold = isSpeedZone(job.column) && job.answerDeliveredAtSimMin == null;
+  if (unsold) {
+    if (job.soldHours != null && job.soldHours > 0) {
+      return { ...job, quotedHours: job.quotedHours ?? job.soldHours, soldHours: undefined };
+    }
+    return job;
+  }
+  if ((job.soldHours == null || job.soldHours === 0) && job.quotedHours != null && job.quotedHours > 0) {
+    return { ...job, soldHours: job.quotedHours };
+  }
+  return job;
+}
+
+/** Soft WIP caps: count ≥ cap → amber, ≥ cap + 2 → red. Badge only, never blocks moves. */
+export const DEFAULT_WIP_LIMITS: Partial<Record<BoardColumnId, number>> = {
+  inspection: 4,
+  approval: 3,
+  parts: 3,
+  wip: 4,
+};
+
+export type WipLevel = 'ok' | 'amber' | 'red';
+
+export function wipLevel(count: number, cap: number | undefined): WipLevel {
+  if (cap == null || cap <= 0) return 'ok';
+  if (count >= cap + 2) return 'red';
+  if (count >= cap) return 'amber';
+  return 'ok';
+}

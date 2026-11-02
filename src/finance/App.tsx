@@ -18,7 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { inputs, setField, resetDefaults, applyStarter, applyBusy, result } =
+  const { inputs, setField, resetDefaults, applyStarter, applyBusy, applyAcquisition, result } =
     useInputs();
   const [tab, setTab] = useState<Tab>('inputs');
 
@@ -44,6 +44,9 @@ export default function App() {
           </button>
           <button type="button" className="btn" onClick={applyBusy}>
             Busy 8-bay
+          </button>
+          <button type="button" className="btn" onClick={applyAcquisition} title="EXAMPLE / illustrative leased acquisition, SBA off">
+            Acquisition EXAMPLE
           </button>
           <button type="button" className="btn btn-ghost" onClick={resetDefaults}>
             Reset defaults

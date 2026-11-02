@@ -22,6 +22,7 @@ import {
   BOARD_COLUMNS,
   COLUMN_LABELS,
   isSpeedZone,
+  normalizeHours,
 } from './types';
 
 export const ANSWER_WINDOW_MIN = 60;
@@ -40,7 +41,11 @@ export interface EngineSnapshot {
 }
 
 function seedJobsFromScenario(scenario: Scenario): VehicleJob[] {
-  return scenario.seedJobs.map((seed, index) => {
+  return scenario.seedJobs.map((seed, index) => normalizeHours(seedJob(seed, index)));
+}
+
+function seedJob(seed: Scenario['seedJobs'][number], index: number): VehicleJob {
+  {
     const pastSpeed =
       seed.column === 'approval' ||
       seed.column === 'parts' ||
@@ -61,7 +66,7 @@ function seedJobsFromScenario(scenario: Scenario): VehicleJob[] {
       answerDeliveredAtSimMin:
         seed.answerDeliveredAtSimMin ?? (pastSpeed ? 0 : undefined),
     };
-  });
+  }
 }
 
 export function startScenario(scenario: Scenario): EngineSnapshot {

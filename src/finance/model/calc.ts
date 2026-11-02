@@ -1,4 +1,5 @@
-import type { BalanceSheet, CalcResult, Kpis, PnL, ShopInputs, StatusBand } from './types';
+import type { BalanceSheet, CalcResult, DebtSchedule, Kpis, PnL, ShopInputs, StatusBand } from './types';
+import { calcDebt, withDscr } from './debt';
 
 /**
  * Pure monthly P&L + balance sheet + KPI engine.
@@ -13,16 +14,23 @@ import type { BalanceSheet, CalcResult, Kpis, PnL, ShopInputs, StatusBand } from
  * - Parts COGS = partsSales × partsCostPct
  * - Sublet & supplies as % of total sales (parts cost bucket for cost-% KPIs)
  * - OpEx = total payroll (w/ tax & benefits) + overhead
- * - BS: AR/AP from days outstanding; cash = opening + NI; equity plugs Assets − Liab
+ * - Waterfall: GP − OpEx = EBITDA → −D&A = EBIT → −interest = EBT → −tax = NI
+ * - Interest = manual interestMonthly + month-1 interest on senior debt + seller note
+ * - BS (one month, opening AR/AP assumed 0):
+ *   opening equity = openingCash + inventory + equipment − all opening debt
+ *   closing cash = opening + NI + D&A − ΔAR + ΔAP − principal − distributions
+ *   closing equity = opening equity + NI − distributions; imbalance should be ≈ 0
  */
 export function calculate(inputs: ShopInputs): CalcResult {
-  const pnl = calcPnL(inputs);
-  const balanceSheet = calcBalanceSheet(inputs, pnl);
+  const debtBase = calcDebt(inputs);
+  const pnl = calcPnL(inputs, debtBase);
+  const debt = withDscr(debtBase, pnl.ebitda);
+  const balanceSheet = calcBalanceSheet(inputs, pnl, debt);
   const kpis = calcKpis(inputs, pnl, balanceSheet);
-  return { pnl, balanceSheet, kpis };
+  return { pnl, balanceSheet, kpis, debt };
 }
 
-export function calcPnL(inputs: ShopInputs): PnL {
+export function calcPnL(inputs: ShopInputs, debt: DebtSchedule = calcDebt(inputs)): PnL {
   const partsMix = clampPct(inputs.partsMixPct) / 100;
   const laborMix = clampPct(inputs.laborMixPct) / 100;
   const mixSum = partsMix + laborMix;
@@ -69,12 +77,14 @@ export function calcPnL(inputs: ShopInputs): PnL {
   const opExPayroll = advisorPayroll + managerPayroll + payrollTaxes + benefits;
   const cleanOpEx = opExPayroll + overhead;
 
-  const operatingIncome = grossProfit - cleanOpEx;
-  const incomeTax =
-    operatingIncome > 0
-      ? operatingIncome * (clampPct(inputs.incomeTaxPct) / 100)
-      : 0;
-  const netIncome = operatingIncome - incomeTax;
+  const ebitda = grossProfit - cleanOpEx;
+  const operatingIncome = ebitda;
+  const depreciation = Math.max(inputs.depreciationMonthly ?? 0, 0);
+  const ebit = ebitda - depreciation;
+  const interest = debt.totalInterest;
+  const ebt = ebit - interest;
+  const incomeTax = ebt > 0 ? ebt * (clampPct(inputs.incomeTaxPct) / 100) : 0;
+  const netIncome = ebt - incomeTax;
   const netMarginPct = monthlySales > 0 ? (netIncome / monthlySales) * 100 : 0;
 
   const laborSalesPctOfSales = monthlySales > 0 ? (laborSales / monthlySales) * 100 : 0;
@@ -111,6 +121,11 @@ export function calcPnL(inputs: ShopInputs): PnL {
     overhead,
     totalOpEx: cleanOpEx,
     operatingIncome,
+    ebitda,
+    depreciation,
+    ebit,
+    interest,
+    ebt,
     incomeTax,
     netIncome,
     netMarginPct,
@@ -125,18 +140,30 @@ export function calcPnL(inputs: ShopInputs): PnL {
   };
 }
 
-export function calcBalanceSheet(inputs: ShopInputs, pnl: PnL): BalanceSheet {
+export function calcBalanceSheet(inputs: ShopInputs, pnl: PnL, debtSched: DebtSchedule = calcDebt(inputs)): BalanceSheet {
   const ar = pnl.monthlySales * (Math.max(inputs.arDays, 0) / 30);
   const purchases = pnl.partsCogs + pnl.sublet;
   const ap = purchases * (Math.max(inputs.apDays, 0) / 30);
   const inventory = Math.max(inputs.inventoryParts, 0);
-  const equipmentNet = Math.max(inputs.equipmentNet, 0);
-  const impliedCashAfterMonth = inputs.openingCash + pnl.netIncome;
-  const cash = Math.max(inputs.openingCash, 0);
+  const openingEquipment = Math.max(inputs.equipmentNet, 0);
+  const equipmentNet = openingEquipment - pnl.depreciation;
+  const openingCash = inputs.openingCash;
+  const openingDebt =
+    Math.max(inputs.debt, 0) +
+    Math.max(inputs.seniorDebtPrincipal ?? 0, 0) +
+    Math.max(inputs.sellerNotePrincipal ?? 0, 0);
+  const openingEquity = openingCash + inventory + openingEquipment - openingDebt;
+
+  const distributions = Math.max(inputs.distributionsMonthly ?? 0, 0);
+  const principalRepaid = debtSched.totalPrincipal;
+  const workingCapitalChange = ar - ap; // opening AR/AP assumed 0
+  const cash =
+    openingCash + pnl.netIncome + pnl.depreciation - workingCapitalChange - principalRepaid - distributions;
   const totalAssets = cash + ar + inventory + equipmentNet;
-  const debt = Math.max(inputs.debt, 0);
+  const debt = openingDebt - principalRepaid;
   const totalLiabilities = ap + debt;
-  const equity = totalAssets - totalLiabilities;
+  const equity = openingEquity + pnl.netIncome - distributions;
+  const imbalance = totalAssets - totalLiabilities - equity;
 
   return {
     cash,
@@ -148,7 +175,12 @@ export function calcBalanceSheet(inputs: ShopInputs, pnl: PnL): BalanceSheet {
     debt,
     totalLiabilities,
     equity,
-    impliedCashAfterMonth,
+    impliedCashAfterMonth: cash,
+    openingEquity,
+    distributions,
+    principalRepaid,
+    workingCapitalChange,
+    imbalance,
   };
 }
 
@@ -229,9 +261,7 @@ export function calcKpis(
     employeeCount > 0 ? pnl.monthlySales / employeeCount : 0;
   const productivityPct = effectiveEfficiencyPct;
 
-  const interest = Math.max(inputs.interestMonthly ?? 0, 0);
-  const depreciation = Math.max(inputs.depreciationMonthly ?? 0, 0);
-  const ebitda = pnl.netIncome + pnl.incomeTax + interest + depreciation;
+  const ebitda = pnl.ebitda;
 
   // Heuristic status bands (illustrative — not advice)
   const gpStatus: StatusBand =

@@ -130,6 +130,11 @@ export function VehicleCard({
             {job.soldHours}h sold
           </span>
         )}
+        {(job.soldHours == null || job.soldHours === 0) && job.quotedHours != null && job.quotedHours > 0 && (
+          <span className="chip chip--meta" title="Quoted hours — not sold yet">
+            {job.quotedHours}h quoted
+          </span>
+        )}
         {(job.qcFailCount ?? 0) > 0 && (
           <span className="chip chip--qc" title="QC fail count">
             QC×{job.qcFailCount}

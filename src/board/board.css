@@ -3111,3 +3111,15 @@ body:has(.demo-overlay:not(.demo-overlay--done)) .job-detail {
     display: none !important;
   }
 }
+
+/* Soft WIP limit badges */
+.column__wip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.column__wip--amber { background: #f5b301; color: #2a1d00; }
+.column__wip--red { background: #d93025; color: #fff; }

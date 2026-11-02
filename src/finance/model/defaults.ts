@@ -8,6 +8,15 @@ const EXTRA_DEFAULTS = {
   investmentCost: 0,
   interestMonthly: 0,
   depreciationMonthly: 0,
+  distributionsMonthly: 0,
+  seniorDebtPrincipal: 0,
+  seniorDebtRatePct: 9.5,
+  seniorDebtTermYears: 7,
+  sellerNotePrincipal: 0,
+  sellerNoteRatePct: 7,
+  sellerNoteTermYears: 5,
+  sbaAvailable: false,
+  ownerCashInvested: 0,
 } as const;
 
 /** Starter 6-bay Michigan-style independent shop (illustrative). */
@@ -92,6 +101,50 @@ export const BUSY_8_BAY: ShopInputs = {
   debt: 55000,
 
   incomeTaxPct: 0,
+};
+
+/**
+ * EXAMPLE / illustrative leased-building acquisition (Option B, SBA off). Not a real listing.
+ * Sales: 22 days × 18 ROs × $505 ARO × 12 ≈ $2.40M/yr.
+ * Sources: bank ~$283k @ 9.5%/7yr + seller note ~$210k @ 7%/5yr + owner cash $175k (range $150–200k)
+ *   = ~$668k uses: $600k purchase (business only) + ~$50k op cash at close + ~$18k closing.
+ * Paid GM $100k/yr + 15% burden (payroll tax 8% + benefits 7%); passive owner, no owner W-2.
+ * DSCR: ≥1.35 green (ownership target), ≥1.25 amber lender floor.
+ */
+export const ACQUISITION_EXAMPLE_LEASED: ShopInputs = {
+  ...BUSY_8_BAY,
+  bayCount: 8,
+  techCount: 7,
+  advisorCount: 2,
+  workingDaysPerMonth: 22,
+  rosPerDay: 18,
+  aro: 505,
+  managerSalaryMonthly: 8333,
+  payrollTaxPct: 8,
+  benefitsPctOfPayroll: 7,
+  // Cost side tuned so EBITDA lands ~12% EXAMPLE (all editable).
+  partsCostPctOfPartsSales: 60,
+  avgTechPayPerFlagHr: 42,
+  advisorSalaryMonthly: 5500,
+  insurance: 3500,
+  marketing: 4000,
+  misc: 35000, // EXAMPLE catch-all other opex (equipment leases, admin, etc.)
+  rent: 8000,
+  investmentCost: 600000,
+  openingCash: 50000,
+  inventoryParts: 50000,
+  equipmentNet: 550000,
+  debt: 0,
+  interestMonthly: 0,
+  depreciationMonthly: 3000,
+  seniorDebtPrincipal: 283000,
+  seniorDebtRatePct: 9.5,
+  seniorDebtTermYears: 7,
+  sellerNotePrincipal: 210000,
+  sellerNoteRatePct: 7,
+  sellerNoteTermYears: 5,
+  sbaAvailable: false,
+  ownerCashInvested: 175000,
 };
 
 export const DEFAULT_INPUTS: ShopInputs = { ...STARTER_6_BAY };

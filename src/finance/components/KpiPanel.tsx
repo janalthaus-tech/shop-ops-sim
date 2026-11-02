@@ -41,6 +41,10 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function dscrStatus(b: string): StatusBand {
+  return b === 'pass' ? 'green' : b === 'warn' ? 'amber' : b === 'fail' ? 'red' : 'neutral';
+}
+
 export function KpiPanel({ result, inputs }: Props) {
   const { pnl, kpis, balanceSheet } = result;
   const doorRate = inputs?.doorRate ?? 0;
@@ -89,7 +93,7 @@ export function KpiPanel({ result, inputs }: Props) {
         <KpiCard
           label="EBITDA"
           value={formatUsd(kpis.ebitda)}
-          sub="NI + tax + interest + depreciation"
+          sub="GP − OpEx, before D&A / interest / tax"
         />
         {kpis.roiPct != null ? (
           <KpiCard
@@ -98,6 +102,25 @@ export function KpiPanel({ result, inputs }: Props) {
             sub="GPD ÷ investment × 100"
           />
         ) : null}
+      </Section>
+
+      <Section title="Debt & DSCR">
+        <KpiCard
+          label="DSCR"
+          value={result.debt.dscr == null ? '—' : formatRatio(result.debt.dscr)}
+          sub={`${result.debt.dscrBand.toUpperCase()} · ≥1.35 green (ownership) · ≥1.25 amber lender floor`}
+          status={dscrStatus(result.debt.dscrBand)}
+        />
+        <KpiCard
+          label="Debt service / mo"
+          value={formatUsd(result.debt.monthlyDebtService)}
+          sub={`Senior ${formatUsd(result.debt.seniorPayment)} · seller ${formatUsd(result.debt.sellerPayment)} · other int ${formatUsd(result.debt.otherInterest)}`}
+        />
+        <KpiCard
+          label="SBA available"
+          value={result.debt.sbaAvailable ? 'Yes' : 'No (Option B)'}
+          sub="SBA often unavailable to non–US citizen / non-PR owners (e.g. L-1B); confirm with lender/counsel"
+        />
       </Section>
 
       <Section title="Capacity & hours">
@@ -225,7 +248,7 @@ export function KpiPanel({ result, inputs }: Props) {
         <KpiCard
           label="Cash runway"
           value={`${formatNum(kpis.cashRunwayMonths, 1)} mo`}
-          sub="Implied cash ÷ (payroll+opex) · ≥3 mo green"
+          sub="Closing cash ÷ (payroll+opex) · ≥3 mo green"
           status={kpis.runwayStatus}
         />
         <KpiCard

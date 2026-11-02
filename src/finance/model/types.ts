@@ -55,6 +55,21 @@ export interface ShopInputs {
 
   // Optional income tax
   incomeTaxPct: number;
+
+  // Owner draws / distributions (monthly cash out of equity)
+  distributionsMonthly: number;
+
+  // Acquisition debt (amortizing). Principal 0 = off.
+  seniorDebtPrincipal: number;
+  seniorDebtRatePct: number;
+  seniorDebtTermYears: number;
+  sellerNotePrincipal: number;
+  sellerNoteRatePct: number;
+  sellerNoteTermYears: number;
+  /** Option B default: false. SBA often unavailable to non-US-citizen / non-PR owners. */
+  sbaAvailable: boolean;
+  /** EXAMPLE owner cash injected at close (informational). */
+  ownerCashInvested: number;
 }
 
 export type StatusBand = 'green' | 'amber' | 'red' | 'neutral';
@@ -84,7 +99,13 @@ export interface PnL {
   partsGrossProfit: number;
   overhead: number;
   totalOpEx: number;
+  /** = EBITDA (operating income before D&A / interest). */
   operatingIncome: number;
+  ebitda: number;
+  depreciation: number;
+  ebit: number;
+  interest: number;
+  ebt: number;
   incomeTax: number;
   netIncome: number;
   netMarginPct: number;
@@ -109,7 +130,34 @@ export interface BalanceSheet {
   debt: number;
   totalLiabilities: number;
   equity: number;
+  /** Closing cash after this month (same as cash). */
   impliedCashAfterMonth: number;
+  openingEquity: number;
+  distributions: number;
+  principalRepaid: number;
+  workingCapitalChange: number;
+  /** Assets − liabilities − equity; should be ≈ 0. */
+  imbalance: number;
+}
+
+export type DscrBand = 'pass' | 'warn' | 'fail' | 'n/a';
+
+export interface DebtSchedule {
+  seniorPayment: number;
+  sellerPayment: number;
+  seniorInterest: number;
+  sellerInterest: number;
+  seniorPrincipal: number;
+  sellerPrincipal: number;
+  otherInterest: number;
+  totalInterest: number;
+  totalPrincipal: number;
+  monthlyDebtService: number;
+  annualDebtService: number;
+  /** Annualized EBITDA ÷ annual debt service; null when no debt service. */
+  dscr: number | null;
+  dscrBand: DscrBand;
+  sbaAvailable: boolean;
 }
 
 export interface Kpis {
@@ -169,4 +217,5 @@ export interface CalcResult {
   pnl: PnL;
   balanceSheet: BalanceSheet;
   kpis: Kpis;
+  debt: DebtSchedule;
 }
