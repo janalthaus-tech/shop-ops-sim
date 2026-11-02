@@ -9,8 +9,11 @@
  *      completed × (480 / scenario.durationMin). Labeled sim-scaled.
  *      Omitted when completed === 0 (never seed 0).
  *  - aro: Board runs do not track RO sales $. We DO NOT treat gpSold as sales.
- *      ARO ≈ (gpSold ÷ ASSUMED_GP_PCT) ÷ completed ROs, with ASSUMED_GP_PCT = 60%.
- *      Omitted when there are no completed ROs or no GP$.
+ *      Numerator and denominator are both completed-only (Final column):
+ *      ARO ≈ (gpCompleted ÷ gpPct) ÷ completed ROs. gpPct defaults to
+ *      ASSUMED_GP_PCT = 41.5% (≈ STARTER preset blended GP), overridable.
+ *      gpSold (pipeline, includes sold-but-unfinished) is never used for ARO.
+ *      Omitted when there are no completed ROs or no completed GP$.
  *  - shopEfficiencyPct: mean of techHours[].efficiencyPct.
  *  - avgTechPayPerFlagHr: scenario.goals.flatRatePerFlagHr (training rate, EXAMPLE).
  *  - techCount: unique techs in techHours.
@@ -20,7 +23,8 @@ import type { DebriefStats, Scenario } from './board/model/types';
 import type { ShopInputs } from './finance/model/types';
 
 export const TEACHING_DAY_MIN = 480;
-export const ASSUMED_GP_PCT = 0.6;
+/** Default GP% used to back sales out of GP$ (EXAMPLE; ≈ preset blended GP). */
+export const ASSUMED_GP_PCT = 0.415;
 export const BRIDGE_SEED_KEY = 'shop-ops-sim-bridge-seed-v1';
 
 export interface BoardLeakageMetrics {
@@ -52,14 +56,16 @@ function round(n: number, dp = 1): number {
 export function boardToFinanceSeed(
   stats: DebriefStats,
   scenario: Pick<Scenario, 'durationMin' | 'goals'>,
+  gpPct: number = ASSUMED_GP_PCT,
 ): Partial<ShopInputs> {
   const seed: Partial<ShopInputs> = {};
   // completed === 0 (failed drill): omit rather than seed 0 over a good model.
   if (scenario.durationMin > 0 && stats.completed > 0) {
     seed.rosPerDay = round(stats.completed * (TEACHING_DAY_MIN / scenario.durationMin), 1);
   }
-  if (stats.completed > 0 && (stats.gpSold ?? 0) > 0) {
-    seed.aro = Math.round((stats.gpSold! / ASSUMED_GP_PCT) / stats.completed);
+  const gpCompleted = stats.gpCompleted ?? 0;
+  if (stats.completed > 0 && gpCompleted > 0 && gpPct > 0) {
+    seed.aro = Math.round((gpCompleted / gpPct) / stats.completed);
   }
   const effs = (stats.techHours ?? [])
     .map((t) => t.efficiencyPct)
@@ -95,17 +101,20 @@ export function buildBridgeSeed(
   stats: DebriefStats,
   scenario: Pick<Scenario, 'id' | 'title' | 'durationMin' | 'goals'>,
   pace: string,
+  gpPct: number = ASSUMED_GP_PCT,
 ): BridgeSeed {
   return {
     scenarioId: scenario.id,
     scenarioTitle: scenario.title,
     pace,
     createdAt: new Date().toISOString(),
-    seed: boardToFinanceSeed(stats, scenario),
+    seed: boardToFinanceSeed(stats, scenario, gpPct),
     leakage: boardLeakage(stats),
     notes: [
       `ROs/day sim-scaled to an 8h day (×${round(TEACHING_DAY_MIN / Math.max(scenario.durationMin, 1), 2)}).`,
-      `ARO = GP$ sold ÷ assumed ${ASSUMED_GP_PCT * 100}% GP ÷ completed ROs (EXAMPLE; Board has no RO sales $).`,
+      stats.completed > 0
+        ? `ARO = GP$ from completed (Final) ROs ÷ assumed ${round(gpPct * 100, 1)}% GP ÷ completed ROs (EXAMPLE; preset blended GP ≈ 41.5%; Board has no RO sales $; unfinished sold work excluded).`
+        : 'No completed ROs — ROs/day and ARO not seeded (finance values kept).',
       'Close ratio = on-time answers ÷ all answers (proxy).',
       'Tech $/flag hr = scenario training flat rate (EXAMPLE).',
     ],

@@ -960,6 +960,11 @@ export function computeDebrief(
     answersOnTime,
     answersLate,
     gpSold: gpProg.current,
+    gpCompleted: Math.round(
+      board.jobs
+        .filter((j) => j.column === 'final')
+        .reduce((sum, j) => sum + jobGpDollars(j, scenario), 0),
+    ),
     gpTarget: gpProg.target,
     techHours: techHours.map((t) => ({
       tech: t.tech,

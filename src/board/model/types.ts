@@ -245,6 +245,8 @@ export interface DebriefStats {
   answersLate?: number;
   /** GP$ sold pipeline vs scenario target */
   gpSold?: number;
+  /** GP$ from completed (Final column) ROs only — aligns with `completed` */
+  gpCompleted?: number;
   gpTarget?: number;
   /** Per-tech flag hours vs daily goal (+ optional flat-rate pay / efficiency) */
   techHours?: {
