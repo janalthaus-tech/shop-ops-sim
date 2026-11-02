@@ -152,14 +152,16 @@ export function calcBalanceSheet(inputs: ShopInputs, pnl: PnL, debtSched: DebtSc
     Math.max(inputs.debt, 0) +
     Math.max(inputs.seniorDebtPrincipal ?? 0, 0) +
     Math.max(inputs.sellerNotePrincipal ?? 0, 0);
-  const openingEquity = openingCash + inventory + openingEquipment - openingDebt;
+  const goodwill = Math.max(inputs.goodwill ?? 0, 0);
+  // Opening equity is a plug: opening assets − opening debt (ownerCashInvested is informational only).
+  const openingEquity = openingCash + inventory + openingEquipment + goodwill - openingDebt;
 
   const distributions = Math.max(inputs.distributionsMonthly ?? 0, 0);
   const principalRepaid = debtSched.totalPrincipal;
   const workingCapitalChange = ar - ap; // opening AR/AP assumed 0
   const cash =
     openingCash + pnl.netIncome + pnl.depreciation - workingCapitalChange - principalRepaid - distributions;
-  const totalAssets = cash + ar + inventory + equipmentNet;
+  const totalAssets = cash + ar + inventory + equipmentNet + goodwill;
   const debt = openingDebt - principalRepaid;
   const totalLiabilities = ap + debt;
   const equity = openingEquity + pnl.netIncome - distributions;
@@ -170,6 +172,7 @@ export function calcBalanceSheet(inputs: ShopInputs, pnl: PnL, debtSched: DebtSc
     ar,
     inventory,
     equipmentNet,
+    goodwill,
     totalAssets,
     ap,
     debt,

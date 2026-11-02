@@ -72,7 +72,7 @@ export function InputPanel({ inputs, setField }: Props) {
 
       <section className="card">
         <h2>Payroll</h2>
-        <p className="card-note">Tech pay is flag-hour linked: flag hours ≈ labor sales ÷ effective labor rate; tech payroll = flag hours × avg pay per flag hour.</p>
+        <p className="card-note">Tech pay is flag-hour linked: flag hours ≈ labor sales ÷ effective labor rate; tech payroll = flag hours × avg pay per flag hour. Payroll tax and benefits % apply to ALL payroll (techs + advisors + GM/manager).</p>
         <div className="field-grid">
           <NumberField label="Avg tech pay / flag hr" value={inputs.avgTechPayPerFlagHr} min={0} step={0.5} prefix="$" onChange={(v) => setField('avgTechPayPerFlagHr', v)} />
           <NumberField label="Advisor salary (each) / mo" value={inputs.advisorSalaryMonthly} min={0} step={100} prefix="$" onChange={(v) => setField('advisorSalaryMonthly', v)} />
@@ -91,7 +91,7 @@ export function InputPanel({ inputs, setField }: Props) {
           <NumberField label="Software" value={inputs.software} min={0} step={25} prefix="$" onChange={(v) => setField('software', v)} />
           <NumberField label="Marketing" value={inputs.marketing} min={0} step={50} prefix="$" onChange={(v) => setField('marketing', v)} />
           <NumberField label="Training" value={inputs.training} min={0} step={25} prefix="$" onChange={(v) => setField('training', v)} />
-          <NumberField label="Misc" value={inputs.misc} min={0} step={25} prefix="$" onChange={(v) => setField('misc', v)} />
+          <NumberField label="Other opex (EXAMPLE plug)" value={inputs.misc} min={0} step={25} prefix="$" onChange={(v) => setField('misc', v)} hint="Catch-all EXAMPLE plug: equipment leases, admin, professional fees, etc." />
         </div>
       </section>
 
@@ -138,7 +138,7 @@ export function InputPanel({ inputs, setField }: Props) {
           <NumberField label="Seller note principal" value={inputs.sellerNotePrincipal} min={0} step={1000} prefix="$" onChange={(v) => setField('sellerNotePrincipal', v)} />
           <NumberField label="Seller note rate" value={inputs.sellerNoteRatePct} min={0} max={30} step={0.25} suffix="%" onChange={(v) => setField('sellerNoteRatePct', v)} />
           <NumberField label="Seller note term (yrs)" value={inputs.sellerNoteTermYears} min={0} step={1} onChange={(v) => setField('sellerNoteTermYears', v)} />
-          <NumberField label="Owner cash invested" value={inputs.ownerCashInvested} min={0} step={5000} prefix="$" onChange={(v) => setField('ownerCashInvested', v)} hint="Informational" />
+          <NumberField label="Owner cash invested" value={inputs.ownerCashInvested} min={0} step={5000} prefix="$" onChange={(v) => setField('ownerCashInvested', v)} hint="Informational — not wired to BS equity (equity = opening assets − debt)" />
           <NumberField label="Distributions / month" value={inputs.distributionsMonthly} min={0} step={500} prefix="$" onChange={(v) => setField('distributionsMonthly', v)} />
           <label className="field">
             <span>SBA available</span>
@@ -154,9 +154,10 @@ export function InputPanel({ inputs, setField }: Props) {
           <NumberField label="AR days" value={inputs.arDays} min={0} step={1} onChange={(v) => setField('arDays', v)} />
           <NumberField label="Parts inventory" value={inputs.inventoryParts} min={0} step={1000} prefix="$" onChange={(v) => setField('inventoryParts', v)} />
           <NumberField label="Equipment (net)" value={inputs.equipmentNet} min={0} step={1000} prefix="$" onChange={(v) => setField('equipmentNet', v)} />
+          <NumberField label="Goodwill / intangibles" value={inputs.goodwill ?? 0} min={0} step={1000} prefix="$" onChange={(v) => setField('goodwill', v)} hint="EXAMPLE acquisition intangibles; amortization goes in D&amp;A" />
           <NumberField label="AP days" value={inputs.apDays} min={0} step={1} onChange={(v) => setField('apDays', v)} />
           <NumberField label="Other debt (interest-only)" value={inputs.debt} min={0} step={1000} prefix="$" onChange={(v) => setField('debt', v)} />
-          <NumberField label="Income tax rate" value={inputs.incomeTaxPct} min={0} max={100} step={1} suffix="%" onChange={(v) => setField('incomeTaxPct', v)} hint="Default 0%; try 21% for a rough corporate placeholder" />
+          <NumberField label="Income tax rate" value={inputs.incomeTaxPct} min={0} max={100} step={1} suffix="%" onChange={(v) => setField('incomeTaxPct', v)} hint="Default 0% = pass-through EXAMPLE (owner taxed personally); try 21% for a rough C-corp placeholder" />
         </div>
       </section>
     </div>

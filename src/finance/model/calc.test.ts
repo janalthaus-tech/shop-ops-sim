@@ -54,3 +54,16 @@ describe('debt', () => {
     expect(calculate(STARTER_6_BAY).debt.dscrBand).toBe('n/a');
   });
 });
+
+describe('acquisition EXAMPLE lock', () => {
+  it('DSCR ≈ 2.78 and pass band; BS split + goodwill balances', () => {
+    const r = calculate(ACQUISITION_EXAMPLE_LEASED);
+    expect(r.debt.dscr!).toBeGreaterThan(2.7);
+    expect(r.debt.dscr!).toBeLessThan(2.86);
+    expect(r.debt.dscrBand).toBe('pass');
+    expect(r.pnl.ebitda / r.pnl.monthlySales).toBeCloseTo(0.122, 2);
+    expect(ACQUISITION_EXAMPLE_LEASED.misc).toBeLessThanOrEqual(12000);
+    expect(r.balanceSheet.goodwill).toBe(420000);
+    expect(Math.abs(r.balanceSheet.imbalance)).toBeLessThan(0.01);
+  });
+});

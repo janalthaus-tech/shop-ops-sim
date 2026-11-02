@@ -50,6 +50,8 @@ export interface ShopInputs {
   arDays: number;
   inventoryParts: number;
   equipmentNet: number;
+  /** Acquisition goodwill / intangibles (EXAMPLE). Optional; amortize via D&A. */
+  goodwill?: number;
   apDays: number;
   debt: number;
 
@@ -125,6 +127,7 @@ export interface BalanceSheet {
   ar: number;
   inventory: number;
   equipmentNet: number;
+  goodwill: number;
   totalAssets: number;
   ap: number;
   debt: number;

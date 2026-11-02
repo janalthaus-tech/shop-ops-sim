@@ -17,6 +17,7 @@ const EXTRA_DEFAULTS = {
   sellerNoteTermYears: 5,
   sbaAvailable: false,
   ownerCashInvested: 0,
+  goodwill: 0,
 } as const;
 
 /** Starter 6-bay Michigan-style independent shop (illustrative). */
@@ -124,19 +125,24 @@ export const ACQUISITION_EXAMPLE_LEASED: ShopInputs = {
   benefitsPctOfPayroll: 7,
   // Cost side tuned so EBITDA lands ~12% EXAMPLE (all editable).
   partsCostPctOfPartsSales: 60,
-  avgTechPayPerFlagHr: 42,
+  // Rebalanced: lower ELR + higher tech $/flag-hr so the opex plug is ~$10k (EBITDA unchanged ~12.2%).
+  effectiveLaborRate: 125,
+  avgTechPayPerFlagHr: 60,
   advisorSalaryMonthly: 5500,
   insurance: 3500,
   marketing: 4000,
-  misc: 35000, // EXAMPLE catch-all other opex (equipment leases, admin, etc.)
+  misc: 10000, // Other opex (EXAMPLE plug): equipment leases, admin, etc.
   rent: 8000,
   investmentCost: 600000,
   openingCash: 50000,
-  inventoryParts: 50000,
-  equipmentNet: 550000,
+  // $600k purchase split EXAMPLE: inventory $60k / equipment $120k / goodwill $420k.
+  inventoryParts: 60000,
+  equipmentNet: 120000,
+  goodwill: 420000,
   debt: 0,
   interestMonthly: 0,
-  depreciationMonthly: 3000,
+  // D&A EXAMPLE: equipment $120k/7yr ≈ $1,429 + goodwill $420k/15yr ≈ $2,333 = $3,762/mo.
+  depreciationMonthly: 3762,
   seniorDebtPrincipal: 283000,
   seniorDebtRatePct: 9.5,
   seniorDebtTermYears: 7,

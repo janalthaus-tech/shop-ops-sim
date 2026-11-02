@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { clearBridgeSeed, loadBridgeSeed, mergeInputs as mergeSeed, type BridgeSeed } from '../bridge';
+import type { ShopInputs } from './model/types';
 import { BalanceSheetPanel } from './components/BalanceSheetPanel';
 import { InputPanel } from './components/InputPanel';
 import { KpiPanel } from './components/KpiPanel';
@@ -18,9 +21,30 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { inputs, setField, resetDefaults, applyStarter, applyBusy, applyAcquisition, result } =
+  const { inputs, setField, resetDefaults, applyStarter, applyBusy, applyAcquisition, replaceInputs, result } =
     useInputs();
   const [tab, setTab] = useState<Tab>('inputs');
+  const location = useLocation();
+  const [bridge, setBridge] = useState<BridgeSeed | null>(
+    () => (location.state as { bridgeSeed?: BridgeSeed } | null)?.bridgeSeed ?? loadBridgeSeed(),
+  );
+  const [preSeed, setPreSeed] = useState<ShopInputs | null>(null);
+  const pending = bridge ? mergeSeed(inputs, bridge.seed) : null;
+
+  const applySeed = () => {
+    if (!bridge || !pending) return;
+    setPreSeed(inputs);
+    replaceInputs(pending.merged);
+  };
+  const resetSeed = () => {
+    if (preSeed) replaceInputs(preSeed);
+    setPreSeed(null);
+  };
+  const dismissSeed = () => {
+    clearBridgeSeed();
+    setBridge(null);
+    setPreSeed(null);
+  };
 
   return (
     <div className="finance-app"><div className="app">
@@ -56,6 +80,49 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {bridge && (
+        <div className="seed-banner no-print" role="status">
+          <div className="seed-banner__text">
+            <strong>
+              {preSeed ? 'Applied' : 'Suggested'} figures from Board run
+            </strong>{' '}
+            — scenario <code>{bridge.scenarioId}</code>, pace {bridge.pace}. Sim-scaled EXAMPLE, not shop data.
+            {!preSeed && pending && (
+              <ul>
+                {pending.changes.length === 0 && <li>Seed matches current inputs.</li>}
+                {pending.changes.map((c) => (
+                  <li key={c.key}>
+                    {c.key}: manual {String(c.current)} → seeded {String(c.seeded)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <ul>
+              {bridge.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+              <li>
+                Leakage: waiters left {bridge.leakage.waitersLeft} · answers late {bridge.leakage.answersLate} · Parts/WIP hrs{' '}
+                {bridge.leakage.hoursStuckPartsWip} · QC restarts {bridge.leakage.qcRestarts} · GP$ sold {formatUsd(bridge.leakage.gpSold)} vs target{' '}
+                {formatUsd(bridge.leakage.gpTarget)}
+              </li>
+            </ul>
+          </div>
+          {!preSeed ? (
+            <button type="button" className="btn btn-primary" onClick={applySeed} disabled={!pending || pending.changes.length === 0}>
+              Apply {pending?.changes.length ?? 0} seeded field(s)
+            </button>
+          ) : (
+            <button type="button" className="btn" onClick={resetSeed}>
+              Reset to my manual inputs
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={dismissSeed}>
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="snapshot-bar no-print">
         <div>
@@ -121,12 +188,16 @@ export default function App() {
           </li>
           <li>
             Tech payroll is treated as labor COGS for gross profit. Advisors, manager, payroll tax
-            &amp; benefits sit in OpEx with overhead.
+            &amp; benefits sit in OpEx with overhead. Payroll tax and benefits % apply to all payroll
+            (techs + advisors + GM/manager).
           </li>
+          <li>Income tax default 0% = pass-through EXAMPLE (entity pays no income tax; owner taxed personally).</li>
+          <li>“Other opex (EXAMPLE plug)” is a catch-all for leases, admin and fees not itemized.</li>
           <li>AR ≈ sales × (AR days / 30). AP ≈ (parts COGS + sublet) × (AP days / 30).</li>
           <li>
-            Equity = Assets − Liabilities (balancing plug). Implied cash after month = opening cash +
-            NI.
+            Opening equity = opening assets − opening debt (balancing plug); owner cash invested is
+            informational and not wired into equity. Closing cash rolls forward from NI, D&amp;A,
+            working capital, principal and distributions.
           </li>
           <li>
             KPI color bands are simple heuristics for discussion, not industry standards or

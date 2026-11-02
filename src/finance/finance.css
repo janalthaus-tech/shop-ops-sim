@@ -433,3 +433,27 @@
 }
 
 }
+
+.finance-app .bs-imbalance-badge {
+  display: inline-block;
+  margin: 0.5rem 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  background: #b91c1c;
+  color: #fff;
+  font-weight: 600;
+}
+.finance-app .seed-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #d97706;
+  background: #fef3c7;
+  color: #78350f;
+}
+.finance-app .seed-banner ul { margin: 0.25rem 0 0; padding-left: 1.1rem; font-size: 0.85em; }
+.finance-app .seed-banner__text { flex: 1 1 18rem; }

@@ -58,6 +58,10 @@ export function useInputs() {
     setInputs({ ...ACQUISITION_EXAMPLE_LEASED });
   }, []);
 
+  const replaceInputs = useCallback((next: ShopInputs) => {
+    setInputs({ ...next });
+  }, []);
+
   const result = useMemo(() => calculate(inputs), [inputs]);
 
   return {
@@ -67,6 +71,7 @@ export function useInputs() {
     applyStarter,
     applyBusy,
     applyAcquisition,
+    replaceInputs,
     result,
   };
 }
